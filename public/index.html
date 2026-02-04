@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Reader - Paste Your Text</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📖 Text Reader</h1>
+            <p class="subtitle">Paste your text below to make it readable with Safari Reader Mode</p>
+        </header>
+
+        <main>
+            <form id="textForm">
+                <div class="form-group">
+                    <label for="textInput">Paste your text here:</label>
+                    <textarea 
+                        id="textInput" 
+                        name="text" 
+                        placeholder="Paste your novel, article, or any text here..."
+                        required
+                    ></textarea>
+                </div>
+
+                <button type="submit" class="btn-primary">
+                    Read Text →
+                </button>
+            </form>
+        </main>
+
+        <footer>
+            <p>Tip: After viewing your text, use Safari's Reader Mode (aA button) for the best reading experience</p>
+        </footer>
+    </div>
+
+    <script>
+        const form = document.getElementById('textForm');
+        const textInput = document.getElementById('textInput');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const text = textInput.value.trim();
+            
+            if (!text) {
+                alert('Please paste some text first!');
+                return;
+            }
+
+            try {
+                const response = await fetch('/submit-text', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ text })
+                });
+
+                if (response.ok) {
+                    window.location.href = '/read';
+                } else {
+                    alert('Something went wrong. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to submit text. Please try again.');
+            }
+        });
+
+        // Auto-resize textarea
+        textInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+        });
+    </script>
+</body>
+</html>

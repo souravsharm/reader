@@ -1,0 +1,19 @@
+{
+  "name": "text-reader",
+  "version": "1.0.0",
+  "description": "Simple web app to paste and read text with Safari Reader Mode",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": ["reader", "text", "safari"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

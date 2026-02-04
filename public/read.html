@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reading - Text Reader</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <article class="reading-container">
+        <header class="reading-header">
+            <a href="/" class="back-btn">← Paste New Text</a>
+            <h1>Your Text</h1>
+        </header>
+
+        <main class="reading-content">
+            <div id="textContent">
+                <p class="loading">Loading your text...</p>
+            </div>
+        </main>
+
+        <footer class="reading-footer">
+            <a href="/" class="btn-secondary">← Back to Paste</a>
+        </footer>
+    </article>
+
+    <script>
+        async function loadText() {
+            try {
+                const response = await fetch('/get-text');
+                const data = await response.json();
+                
+                const textContent = document.getElementById('textContent');
+                
+                if (data.text && data.text.trim()) {
+                    // Convert plain text to paragraphs for better readability
+                    const paragraphs = data.text
+                        .split('\n\n')
+                        .filter(p => p.trim())
+                        .map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`)
+                        .join('');
+                    
+                    textContent.innerHTML = paragraphs || '<p>No text available.</p>';
+                } else {
+                    textContent.innerHTML = '<p class="no-text">No text available. <a href="/">Go back</a> and paste some text.</p>';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('textContent').innerHTML = 
+                    '<p class="error">Failed to load text. <a href="/">Try again</a></p>';
+            }
+        }
+
+        // Load text when page loads
+        loadText();
+    </script>
+</body>
+</html>
