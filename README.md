@@ -2,14 +2,31 @@
 
 A simple, clean web app designed to paste text and read it with Safari's Reader Mode for a better mobile reading experience.
 
-## Features
+## ⭐ Key Features
 
-- ✨ Clean, minimalist UI
-- 📱 Mobile-friendly and responsive
-- 🎨 Beautiful gradient design
-- 📖 Optimized for Safari Reader Mode
-- ⚡ Fast and lightweight
-- 🔄 Easy text switching
+- ✨ **Smart Paragraph Reconstruction** - Automatically fixes poorly formatted text
+- 📱 **Mobile-Optimized** - Perfect for iPhone/iPad reading
+- 🎨 **Beautiful UI** - Clean gradient design
+- 📖 **Safari Reader Mode Ready** - Semantic HTML for perfect formatting
+- 🔒 **Secure** - XSS protection with HTML escaping
+- ⚡ **Lightning Fast** - No database, pure client-side processing
+- 🔄 **Easy Text Switching** - Paste new content anytime
+- 🧠 **Multi-Strategy Algorithm** - Handles any text format gracefully
+
+## 🎯 The Problem It Solves
+
+When you copy text from websites, paragraph spacing is often lost:
+- Single newlines become spaces
+- Double newlines disappear
+- Text becomes one cramped block
+
+**This app fixes that automatically!** It intelligently reconstructs paragraphs using:
+1. Double newline detection
+2. Sentence-ending heuristics
+3. Capital letter detection
+4. Aggressive splitting (fallback)
+
+See [SOLUTION_EXPLAINED.md](./SOLUTION_EXPLAINED.md) for technical details.
 
 ## Local Setup
 

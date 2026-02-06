@@ -176,15 +176,52 @@ footer {
     font-size: 1.15rem;
     line-height: 1.8;
     color: #2c3e50;
+    /* Optimal settings for Safari Reader Mode */
+    font-family: -apple-system, BlinkMacSystemFont, 'Charter', 'Georgia', serif;
 }
 
 .reading-content p {
-    margin-bottom: 1.5em;
+    /* CRITICAL: Generous paragraph spacing for readability */
+    margin-bottom: 1.8em;
+    
+    /* Text rendering optimizations */
     text-align: justify;
+    text-justify: inter-word;
+    
+    /* Prevent orphans and widows for better typography */
+    orphans: 3;
+    widows: 3;
+    
+    /* Safari-specific optimizations */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    
+    /* Ensure proper spacing even with poor formatting */
+    hyphens: auto;
+    -webkit-hyphens: auto;
+    word-spacing: 0.05em;
+    letter-spacing: 0.01em;
 }
 
 .reading-content p:last-child {
     margin-bottom: 0;
+}
+
+/* Add extra spacing between paragraphs in Safari Reader Mode */
+@supports (-webkit-backdrop-filter: blur(1px)) {
+    .reading-content p {
+        margin-bottom: 2em;
+    }
+}
+
+/* First paragraph special styling (optional but nice) */
+.reading-content p:first-of-type {
+    margin-top: 0;
+}
+
+/* Ensure proper spacing for consecutive paragraphs */
+.reading-content p + p {
+    margin-top: 0;
 }
 
 .loading,
