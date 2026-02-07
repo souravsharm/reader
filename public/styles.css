@@ -224,7 +224,14 @@ footer {
     margin-top: 0;
 }
 
-/* Scene break styling - extra spacing for ellipsis */
+/* Line breaks within paragraphs (for quote separation) */
+.reading-content p br {
+    display: block;
+    content: "";
+    margin-bottom: 0.8em;
+}
+
+/* Scene break styling - extra spacing and centering */
 .reading-content p.scene-break {
     text-align: center;
     margin: 3em auto;
