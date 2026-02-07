@@ -224,11 +224,13 @@ footer {
     margin-top: 0;
 }
 
-/* Add extra spacing around three dots (ellipsis) for scene breaks */
-.reading-content p:has-text("..."),
-.reading-content p:has-text("…") {
-    margin-top: 2em;
-    margin-bottom: 2em;
+/* Scene break styling - extra spacing for ellipsis */
+.reading-content p.scene-break {
+    text-align: center;
+    margin: 3em auto;
+    color: #666;
+    font-size: 1.2rem;
+    letter-spacing: 0.3em;
 }
 
 .loading,
