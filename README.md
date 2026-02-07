@@ -5,6 +5,8 @@ A simple, clean web app designed to paste text and read it with Safari's Reader 
 ## ⭐ Key Features
 
 - ✨ **Smart Paragraph Reconstruction** - Automatically fixes poorly formatted text
+- 💬 **Dialogue Spacing** - Separates consecutive quotes for clarity
+- ⋯ **Scene Break Detection** - Recognizes `...` as scene transitions
 - 📱 **Mobile-Optimized** - Perfect for iPhone/iPad reading
 - 🎨 **Beautiful UI** - Clean gradient design
 - 📖 **Safari Reader Mode Ready** - Semantic HTML for perfect formatting
@@ -26,6 +28,19 @@ When you copy text from websites, paragraph spacing is often lost:
 3. Capital letter detection
 4. Aggressive splitting (fallback)
 
+### Additional Novel-Specific Features:
+
+**Dialogue Spacing:**
+- Detects consecutive quotes: `"Quote one." "Quote two."`
+- Automatically separates them into distinct paragraphs
+- Makes dialogue easy to follow
+
+**Scene Break Detection:**
+- Recognizes `...` (three dots) as scene transitions
+- Creates clear visual breaks with spacing
+- Helps readers understand time/location shifts
+
+See [DIALOGUE_AND_SCENE_BREAKS.md](./DIALOGUE_AND_SCENE_BREAKS.md) for details.
 See [SOLUTION_EXPLAINED.md](./SOLUTION_EXPLAINED.md) for technical details.
 
 ## Local Setup
@@ -62,9 +77,35 @@ http://localhost:3000
 
 1. **Paste your text**: Open the app and paste any text (novel, article, etc.) into the textarea
 2. **Click "Read Text →"**: Submit your text
-3. **View formatted text**: Your text will be displayed in a clean, readable format
+3. **View formatted text**: Your text will be displayed with:
+   - Proper paragraph spacing
+   - Separated dialogue (consecutive quotes)
+   - Clear scene breaks (when `...` is used)
 4. **Use Safari Reader Mode**: On iPhone/iPad, tap the "aA" button in Safari to enable Reader Mode for the best reading experience
 5. **Paste new text**: Click "← Paste New Text" to submit different content
+
+### Example Transformations:
+
+**Input (cramped):**
+```
+"Hello," she said. "Hi," he replied.
+Text continues here.
+...
+New scene starts.
+```
+
+**Output (beautiful):**
+```
+"Hello," she said.
+
+"Hi," he replied.
+
+Text continues here.
+
+          * * *
+
+New scene starts.
+```
 
 ## Deployment
 
