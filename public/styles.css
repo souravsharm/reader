@@ -224,17 +224,36 @@ footer {
     margin-top: 0;
 }
 
-/* Line breaks within paragraphs (for quote separation) */
-.reading-content p br {
-    display: block;
-    content: "";
-    margin-bottom: 0.8em;
+/* Render-time formatting blocks */
+.para-group {
+    /* Preserve original blank-line paragraph separation visually */
+    margin-bottom: 1.8em;
 }
 
-/* Scene break styling - extra spacing and centering */
+.para-group:last-child {
+    margin-bottom: 0;
+}
+
+/* Inside a group, avoid large paragraph gaps (these are "lines" within one pasted paragraph) */
+.para-group > p.prose {
+    margin: 0.4em 0;
+}
+
+.para-group > blockquote.quote {
+    margin: 0.8em 0;
+    padding-left: 1em;
+    border-left: 3px solid rgba(102, 126, 234, 0.35);
+    color: #2c3e50;
+}
+
+.para-group > blockquote.quote p {
+    margin: 0;
+}
+
+/* Scene break styling - isolated line with consistent spacing */
 .reading-content p.scene-break {
     text-align: center;
-    margin: 3em auto;
+    margin: 1.8em auto;
     color: #666;
     font-size: 1.2rem;
     letter-spacing: 0.3em;

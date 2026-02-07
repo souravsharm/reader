@@ -26,9 +26,10 @@
 
     <script>
         /**
-         * Format text with two rules:
-         * Rule A: Quotes always on their own lines
-         * Rule B: Scene breaks "..." isolated with blank lines
+         * Render-time formatting only (no app refactor):
+         * - Preserve blank-line paragraph grouping from pasted text.
+         * - Rule 2: Quoted segments ("...") are always isolated as their own blocks.
+         * - Rule 3: Standalone scene-break lines (...) are isolated with spacing.
          */
         function reconstructParagraphs(text) {
             if (!text || !text.trim()) {
@@ -39,80 +40,120 @@
             text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
             text = text.trim();
 
-            // Split into paragraphs (preserve original blank-line grouping)
-            const paragraphs = text.split(/\n\n+/);
-            const htmlParts = [];
+            // Preserve original paragraph grouping: blank-line separated blocks.
+            // Also tolerate whitespace-only "blank" lines.
+            const rawParagraphs = text.split(/\n[ \t]*\n+/);
 
-            for (let para of paragraphs) {
-                para = para.trim();
+            const out = [];
+            let currentGroupBlocks = [];
+
+            const flushGroup = () => {
+                if (currentGroupBlocks.length === 0) return;
+                out.push(renderParagraphGroup(currentGroupBlocks));
+                currentGroupBlocks = [];
+            };
+
+            for (const rawPara of rawParagraphs) {
+                const para = rawPara.trim();
                 if (!para) continue;
 
-                // RULE B: Check if this is a scene break (exactly "...")
-                if (/^\s*\.{3}\s*$/.test(para) || /^\s*…\s*$/.test(para)) {
-                    htmlParts.push('<p class="scene-break">...</p>');
-                    continue;
+                // A raw paragraph may still contain multiple lines; isolate scene breaks that
+                // appear as their own line within the paragraph.
+                const lines = para.split('\n');
+                const textLines = [];
+
+                const flushTextLinesIntoGroup = () => {
+                    if (textLines.length === 0) return;
+                    const joined = textLines.join(' ').replace(/\s+/g, ' ').trim();
+                    textLines.length = 0;
+                    if (!joined) return;
+                    currentGroupBlocks.push(...splitIntoQuoteAndProseBlocks(joined));
+                };
+
+                for (const line of lines) {
+                    if (isSceneBreakLine(line)) {
+                        // Rule 3: scene break must not merge with surrounding prose/quotes.
+                        flushTextLinesIntoGroup();
+                        flushGroup();
+                        out.push(renderSceneBreak());
+                        continue;
+                    }
+                    if (line.trim().length === 0) continue;
+                    textLines.push(line.trim());
                 }
 
-                // RULE A: Extract quotes and non-quote text as separate lines
-                const lines = extractQuotesAndText(para);
-                
-                if (lines.length === 0) continue;
-
-                // Render paragraph with lines separated by <br>
-                const linesHtml = lines
-                    .map(line => escapeHtml(line))
-                    .join('<br>\n');
-                
-                htmlParts.push(`<p>${linesHtml}</p>`);
+                flushTextLinesIntoGroup();
+                // End of original paragraph group.
+                flushGroup();
             }
 
-            return htmlParts.join('\n');
+            flushGroup();
+            return out.join('\n');
         }
 
         /**
-         * Extract quotes and non-quote text as separate lines
-         * Example: '"ram" "sham" I think' → ['"ram"', '"sham"', 'I think']
+         * Rule 3 helper: line is exactly "..." (ignoring surrounding whitespace).
          */
-        function extractQuotesAndText(text) {
-            const lines = [];
-            
-            // Pattern matches quoted strings (both straight and curly quotes)
-            const quotePattern = /(["""][^"""]*["""])/g;
+        function isSceneBreakLine(line) {
+            return /^\s*\.{3}\s*$/.test(line);
+        }
+
+        /**
+         * Rule 2: split into prose/quote blocks so quotes never share a line with prose.
+         * Example: '"ram"  "sham" I think' -> ['"ram"', '"sham"', 'I think']
+         *
+         * Defensive behavior:
+         * - Only isolates properly paired quotes ("..."). Unmatched quotes are left as prose.
+         * - Does not split normal prose except around quotes.
+         */
+        function splitIntoQuoteAndProseBlocks(paragraphText) {
+            const blocks = [];
+
+            // Match ASCII double quotes with no newline inside the quoted segment.
+            // This avoids runaway matches across large sections.
+            const quoteRe = /"[^"\n]*"/g;
+
             let lastIndex = 0;
             let match;
 
-            while ((match = quotePattern.exec(text)) !== null) {
-                // Text before the quote
-                if (match.index > lastIndex) {
-                    const before = text.substring(lastIndex, match.index).trim();
-                    if (before) {
-                        lines.push(before);
+            while ((match = quoteRe.exec(paragraphText)) !== null) {
+                const before = paragraphText.slice(lastIndex, match.index).trim();
+                if (before) blocks.push({ type: 'prose', text: before });
+
+                const quoted = match[0].trim();
+                if (quoted) blocks.push({ type: 'quote', text: quoted });
+
+                lastIndex = quoteRe.lastIndex;
+            }
+
+            const after = paragraphText.slice(lastIndex).trim();
+            if (after) blocks.push({ type: 'prose', text: after });
+
+            if (blocks.length === 0 && paragraphText.trim()) {
+                blocks.push({ type: 'prose', text: paragraphText.trim() });
+            }
+
+            return blocks;
+        }
+
+        function renderParagraphGroup(blocks) {
+            // Keep group semantics but allow multiple blocks inside.
+            // Safari Reader will still see <p> and <blockquote> as readable content.
+            const inner = blocks
+                .map((b) => {
+                    if (b.type === 'quote') {
+                        return `<blockquote class="quote"><p>${escapeHtml(b.text)}</p></blockquote>`;
                     }
-                }
+                    return `<p class="prose">${escapeHtml(b.text)}</p>`;
+                })
+                .join('\n');
 
-                // The quote itself
-                const quote = match[1].trim();
-                if (quote) {
-                    lines.push(quote);
-                }
+            return `<div class="para-group">\n${inner}\n</div>`;
+        }
 
-                lastIndex = quotePattern.lastIndex;
-            }
-
-            // Text after the last quote
-            if (lastIndex < text.length) {
-                const after = text.substring(lastIndex).trim();
-                if (after) {
-                    lines.push(after);
-                }
-            }
-
-            // If no quotes found, return the whole text as one line
-            if (lines.length === 0 && text.trim()) {
-                lines.push(text.trim());
-            }
-
-            return lines;
+        function renderSceneBreak() {
+            // Render as its own block with CSS-controlled spacing.
+            return '<p class="scene-break">...</p>';
         }
 
         /**
