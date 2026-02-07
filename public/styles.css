@@ -224,39 +224,11 @@ footer {
     margin-top: 0;
 }
 
-/* Scene Break Styling */
-.scene-break {
-    text-align: center;
-    margin: 3em auto;
-    padding: 2em 0;
-    position: relative;
-    clear: both;
-}
-
-.scene-break span {
-    display: inline-block;
-    font-size: 1.5rem;
-    letter-spacing: 1em;
-    color: #999;
-    font-weight: 300;
-}
-
-/* Alternative: Just spacing without visible marker (uncomment if preferred) */
-/*
-.scene-break {
-    height: 4em;
-    margin: 3em auto;
-}
-.scene-break span {
-    display: none;
-}
-*/
-
-/* Ensure scene breaks work in Safari Reader Mode */
-@supports (-webkit-backdrop-filter: blur(1px)) {
-    .scene-break {
-        margin: 3.5em auto;
-    }
+/* Add extra spacing around three dots (ellipsis) for scene breaks */
+.reading-content p:has-text("..."),
+.reading-content p:has-text("…") {
+    margin-top: 2em;
+    margin-bottom: 2em;
 }
 
 .loading,

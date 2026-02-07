@@ -40,9 +40,6 @@
             // Remove excessive whitespace but preserve intentional breaks
             text = text.trim();
 
-            // PRE-PROCESSING: Handle dialogue and scene breaks
-            text = preprocessDialogueAndSceneBreaks(text);
-
             // Strategy 1: Check if text has clear double-newline paragraphs
             const hasDoubleNewlines = /\n\n+/.test(text);
             
@@ -53,11 +50,6 @@
                     .map(p => p.trim())
                     .filter(p => p.length > 0)
                     .map(p => {
-                        // Check if this is a scene break marker
-                        if (isSceneBreak(p)) {
-                            return '<div class="scene-break"><span>* * *</span></div>';
-                        }
-                        
                         // Replace single newlines within paragraphs with spaces
                         // This handles wrapped text within a paragraph
                         const cleaned = p.replace(/\n/g, ' ').replace(/\s+/g, ' ');
@@ -133,47 +125,8 @@
 
             // Return the heuristically detected paragraphs
             return paragraphs
-                .map(p => {
-                    // Check if this is a scene break marker
-                    if (isSceneBreak(p)) {
-                        return '<div class="scene-break"><span>* * *</span></div>';
-                    }
-                    return `<p>${escapeHtml(p)}</p>`;
-                })
+                .map(p => `<p>${escapeHtml(p)}</p>`)
                 .join('');
-        }
-
-        /**
-         * Pre-processes text to handle dialogue spacing and scene breaks
-         */
-        function preprocessDialogueAndSceneBreaks(text) {
-            // Step 1: Handle consecutive quotes (dialogue)
-            // Pattern: "Quote one." "Quote two." → "Quote one."\n"Quote two."
-            text = text.replace(/(["""])\s+(["""])/g, '$1\n\n$2');
-            
-            // Step 2: Handle scene breaks with three dots
-            // Patterns: ... or … (ellipsis character) when standalone
-            // Replace with special marker that we'll style later
-            text = text.replace(/^\.\.\.$/gm, '~~~SCENE_BREAK~~~');
-            text = text.replace(/^\s*…\s*$/gm, '~~~SCENE_BREAK~~~');
-            
-            // Also handle when ... appears on its own line with spaces
-            text = text.replace(/^\s*\.\.\.\s*$/gm, '~~~SCENE_BREAK~~~');
-            
-            // Handle ... with surrounding newlines (clear scene break)
-            text = text.replace(/\n\s*\.\.\.\s*\n/g, '\n\n~~~SCENE_BREAK~~~\n\n');
-            text = text.replace(/\n\s*…\s*\n/g, '\n\n~~~SCENE_BREAK~~~\n\n');
-            
-            return text;
-        }
-
-        /**
-         * Checks if a paragraph is a scene break marker
-         */
-        function isSceneBreak(text) {
-            return text.trim() === '~~~SCENE_BREAK~~~' || 
-                   /^\.\.\.+$/.test(text.trim()) ||
-                   /^…+$/.test(text.trim());
         }
 
         /**
