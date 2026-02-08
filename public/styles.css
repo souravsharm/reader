@@ -214,22 +214,6 @@ footer {
     margin-top: 0;
 }
 
-.reading-content p.scene-break {
-    text-align: center;
-    margin: 1.55em auto;
-    padding: 0;
-    color: #666;
-    font-size: 1.05rem;
-    font-weight: 600;
-    line-height: 1;
-    letter-spacing: 0.22em;
-}
-
-.reading-content p.prose + p.scene-break,
-.reading-content p.scene-break + p.prose {
-    margin-top: 1.6em;
-}
-
 .loading,
 .no-text,
 .error {
@@ -326,7 +310,4 @@ footer {
         margin-bottom: 1.2em;
     }
 
-    .reading-content p.scene-break {
-        margin: 1.45em auto;
-    }
 }
