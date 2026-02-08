@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reading - Text Reader</title>
-    <link rel="stylesheet" href="styles.css?v=20260208-2">
+    <link rel="stylesheet" href="styles.css?v=20260208-3">
 </head>
 <body>
     <article class="reading-container">
@@ -26,11 +26,9 @@
 
     <script>
         /**
-         * Render-time formatting pipeline:
-         * 1) Normalize copy/paste artifacts (line endings, smart punctuation, spacing).
-         * 2) Preserve explicit paragraph breaks when available.
-         * 3) Reconstruct readable chunks when iPhone copy flattens text into long blocks.
-         * 4) Keep scene breaks (...) as isolated blocks with clear spacing.
+         * Simple rule:
+         * - User ends each paragraph with "$$".
+         * - "$$" is converted to paragraph breaks.
          */
         function reconstructParagraphs(text) {
             if (!text || !text.trim()) {
@@ -38,19 +36,20 @@
             }
 
             const normalized = normalizeInputText(text);
-            const segments = splitIntoSegments(normalized);
+            const rawParagraphs = normalized.split(/\n[ \t]*\n+/);
             const out = [];
 
-            for (const segment of segments) {
-                if (segment.type === 'scene-break') {
-                    out.push(renderSceneBreak());
-                    continue;
-                }
+            for (const raw of rawParagraphs) {
+                const paragraph = raw
+                    .split('\n')
+                    .map((line) => line.trim())
+                    .filter(Boolean)
+                    .join(' ')
+                    .replace(/\s+/g, ' ')
+                    .trim();
 
-                const readableParagraphs = splitLongParagraph(segment.text);
-                for (const para of readableParagraphs) {
-                    out.push(renderParagraph(para));
-                }
+                if (!paragraph) continue;
+                out.push(`<p class="prose">${escapeHtml(paragraph)}</p>`);
             }
 
             return out.length > 0
@@ -58,198 +57,31 @@
                 : '<p class="no-text">No text available. <a href="/">Go back</a> and paste some text.</p>';
         }
 
-        /**
-         * Normalize copy/paste artifacts seen across browsers (especially iPhone Safari).
-         */
         function normalizeInputText(text) {
-            const normalized = text
+            return text
                 .replace(/\r\n/g, '\n')
                 .replace(/\r/g, '\n')
                 .replace(/[\u2028\u2029]/g, '\n')
                 .replace(/[\u00A0\u2007\u202F]/g, ' ')
-                .replace(/[ \t]*<[ \t]*\n+/g, '\n\n')
-                .replace(/[ \t]*<[ \t]*$/g, '')
-                // Insert missing spaces only when a new sentence starts immediately.
-                // Example: "Hello.World" -> "Hello. World"
-                .replace(/([.!?])(?=[A-Z])/g, '$1 ')
-                // Handle new sentence starting with an opening quote.
-                .replace(/([.!?])(?=["\u201C][A-Z])/g, '$1 ')
-                // Remove accidental spacing before a closing quote.
-                // Example: 'go! "' -> 'go!"'
-                .replace(/\s+(["\u201D])/g, '$1')
-                // Keep consecutive quote blocks separate.
-                .replace(/(["\u201D])\s+(["\u201C])/g, '$1\n\n$2')
-                // Convert inline scene-break token to a standalone line.
-                .replace(/([.!?]"?)\s*(?:\.{3}|\u2026)\s*(?=[A-Z"\u201C])/g, '$1\n...\n')
-                // Normalize scene break variants to "..."
-                .replace(/^\s*(?:\u2026|\.{3}|\. \. \.)\s*$/gm, '...');
-
-            return removeQuoteNoiseLines(normalized).trim();
+                .replace(/[ \t]*\$\$[ \t]*/g, '\n\n')
+                .replace(/\n{3,}/g, '\n\n')
+                .trim();
         }
 
-        /**
-         * Some mobile copy sources inject quote-only lines (just '"' or curly quotes).
-         * These lines break spacing on iPhone; remove them when they appear between prose lines.
-         */
-        function removeQuoteNoiseLines(text) {
-            const lines = text.split('\n');
-            const isQuoteOnly = (line) => /^\s*["\u201C\u201D]\s*$/.test(line);
-            const startsWithQuote = (line) => /^\s*["\u201C]/.test(line);
-            const endsWithQuote = (line) => /["\u201D]\s*$/.test(line);
-
-            for (let i = 0; i < lines.length; i += 1) {
-                if (!isQuoteOnly(lines[i])) continue;
-
-                const prev = i > 0 ? lines[i - 1] : '';
-                const next = i + 1 < lines.length ? lines[i + 1] : '';
-
-                const likelyNoise =
-                    (prev && next) ||
-                    endsWithQuote(prev) ||
-                    startsWithQuote(next);
-
-                if (likelyNoise) {
-                    lines[i] = '';
-                }
-            }
-
-            return lines.join('\n');
-        }
-
-        /**
-         * Build semantic segments: paragraph text blocks and scene breaks.
-         */
-        function splitIntoSegments(text) {
-            const segments = [];
-            const rawBlocks = text.split(/\n[ \t]*\n+/);
-
-            for (const rawBlock of rawBlocks) {
-                const block = rawBlock.trim();
-                if (!block) continue;
-
-                const lines = block.split('\n');
-                const runningTextLines = [];
-
-                const flushText = () => {
-                    if (runningTextLines.length === 0) return;
-                    const joined = runningTextLines.join(' ').replace(/\s+/g, ' ').trim();
-                    runningTextLines.length = 0;
-                    if (!joined) return;
-                    segments.push({ type: 'text', text: joined });
-                };
-
-                for (const line of lines) {
-                    if (isSceneBreakLine(line)) {
-                        flushText();
-                        segments.push({ type: 'scene-break' });
-                        continue;
-                    }
-
-                    const cleanedLine = line.trim();
-                    if (!cleanedLine) continue;
-                    runningTextLines.push(cleanedLine);
-                }
-
-                flushText();
-            }
-
-            return segments;
-        }
-
-        /**
-         * Recognize scene break lines:
-         * - ...
-         * - unicode ellipsis
-         * - . . .
-         * - * * *
-         */
-        function isSceneBreakLine(line) {
-            return /^\s*(?:\.{3}|\u2026|\. \. \.|\*\s*\*\s*\*)\s*$/.test(line);
-        }
-
-        /**
-         * If a text block is very long (common after iPhone "copy all"),
-         * split into smaller paragraphs by sentence boundaries.
-         */
-        function splitLongParagraph(text) {
-            const cleaned = text.replace(/\s+/g, ' ').trim();
-            if (!cleaned) return [];
-
-            const sentenceMatches = cleaned.match(/[^.!?\u2026]+(?:[.!?\u2026]+["'\u201D\u2019)\]]*)+|[^.!?\u2026]+$/g) || [cleaned];
-            const sentences = sentenceMatches
-                .map((s) => s.trim())
-                .filter(Boolean);
-
-            // Preserve normally sized paragraphs.
-            if (cleaned.length < 260 || sentences.length < 3) {
-                return [cleaned];
-            }
-
-            const chunks = [];
-            let current = [];
-            let currentLen = 0;
-
-            for (const sentence of sentences) {
-                const projectedLen = currentLen + (current.length ? 1 : 0) + sentence.length;
-                const shouldFlush = current.length > 0 && (current.length >= 2 || projectedLen > 220);
-
-                if (shouldFlush) {
-                    chunks.push(current.join(' '));
-                    current = [];
-                    currentLen = 0;
-                }
-
-                current.push(sentence);
-                currentLen += (currentLen ? 1 : 0) + sentence.length;
-            }
-
-            if (current.length > 0) {
-                chunks.push(current.join(' '));
-            }
-
-            return chunks.length > 0 ? chunks : [cleaned];
-        }
-
-        function renderParagraph(text) {
-            return `<p class="prose">${escapeHtml(text)}</p>`;
-        }
-
-        function renderSceneBreak() {
-            return '<p class="scene-break">...</p>';
-        }
-
-        /**
-         * Escape HTML to prevent XSS attacks.
-         */
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         }
 
-        function analyzeText(text) {
-            const stats = {
-                length: text.length,
-                lines: text.split('\n').length,
-                paragraphHints: text.split(/\n[ \t]*\n+/).length,
-                words: text.split(/\s+/).length
-            };
-            console.log('Text Analysis:', stats);
-            return stats;
-        }
-
         async function loadText() {
             try {
                 const response = await fetch('/get-text');
                 const data = await response.json();
-
                 const textContent = document.getElementById('textContent');
 
                 if (data.text && data.text.trim()) {
-                    analyzeText(data.text);
-                    const html = reconstructParagraphs(data.text);
-                    textContent.innerHTML = html;
-                    console.log('Text rendered successfully');
+                    textContent.innerHTML = reconstructParagraphs(data.text);
                 } else {
                     textContent.innerHTML = '<p class="no-text">No text available. <a href="/">Go back</a> and paste some text.</p>';
                 }

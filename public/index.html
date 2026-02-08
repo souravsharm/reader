@@ -4,35 +4,35 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Text Reader - Paste Your Text</title>
-    <link rel="stylesheet" href="styles.css?v=20260208-2">
+    <link rel="stylesheet" href="styles.css?v=20260208-3">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>📖 Text Reader</h1>
-            <p class="subtitle">Paste your text below to make it readable with Safari Reader Mode</p>
+            <h1>Text Reader</h1>
+            <p class="subtitle">Use $$ at the end of each paragraph.</p>
         </header>
 
         <main>
             <form id="textForm">
                 <div class="form-group">
-                    <label for="textInput">Paste your text here:</label>
-                    <textarea 
-                        id="textInput" 
-                        name="text" 
-                        placeholder="Paste your novel, article, or any text here..."
+                    <label for="textInput">Paste your text here (end each paragraph with $$):</label>
+                    <textarea
+                        id="textInput"
+                        name="text"
+                        placeholder="Example: First paragraph$$ Second paragraph$$ Third paragraph$$"
                         required
                     ></textarea>
                 </div>
 
                 <button type="submit" class="btn-primary">
-                    Read Text →
+                    Read Text &rarr;
                 </button>
             </form>
         </main>
 
         <footer>
-            <p><strong>💡 Pro Tip:</strong> After submitting, use Safari's Reader Mode (tap the <strong>aA</strong> button) for optimal reading. The app intelligently reconstructs paragraphs from poorly formatted text.</p>
+            <p><strong>Tip:</strong> Put <strong>$$</strong> where each paragraph should end.</p>
         </footer>
     </div>
 
@@ -42,9 +42,9 @@
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const text = textInput.value.trim();
-            
+
             if (!text) {
                 alert('Please paste some text first!');
                 return;
@@ -70,10 +70,9 @@
             }
         });
 
-        // Auto-resize textarea
         textInput.addEventListener('input', function() {
             this.style.height = 'auto';
-            this.style.height = (this.scrollHeight) + 'px';
+            this.style.height = this.scrollHeight + 'px';
         });
     </script>
 </body>
