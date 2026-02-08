@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reading - Text Reader</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=20260208-2">
 </head>
 <body>
     <article class="reading-container">
@@ -62,7 +62,7 @@
          * Normalize copy/paste artifacts seen across browsers (especially iPhone Safari).
          */
         function normalizeInputText(text) {
-            return text
+            const normalized = text
                 .replace(/\r\n/g, '\n')
                 .replace(/\r/g, '\n')
                 .replace(/[\u2028\u2029]/g, '\n')
@@ -77,8 +77,38 @@
                 // Convert inline scene-break token to a standalone line.
                 .replace(/([.!?]"?)\s*(?:\.{3}|\u2026)\s*(?=[A-Z"\u201C])/g, '$1\n...\n')
                 // Normalize scene break variants to "..."
-                .replace(/^\s*(?:\u2026|\.{3}|\. \. \.)\s*$/gm, '...')
-                .trim();
+                .replace(/^\s*(?:\u2026|\.{3}|\. \. \.)\s*$/gm, '...');
+
+            return removeQuoteNoiseLines(normalized).trim();
+        }
+
+        /**
+         * Some mobile copy sources inject quote-only lines (just '"' or curly quotes).
+         * These lines break spacing on iPhone; remove them when they appear between prose lines.
+         */
+        function removeQuoteNoiseLines(text) {
+            const lines = text.split('\n');
+            const isQuoteOnly = (line) => /^\s*["\u201C\u201D]\s*$/.test(line);
+            const startsWithQuote = (line) => /^\s*["\u201C]/.test(line);
+            const endsWithQuote = (line) => /["\u201D]\s*$/.test(line);
+
+            for (let i = 0; i < lines.length; i += 1) {
+                if (!isQuoteOnly(lines[i])) continue;
+
+                const prev = i > 0 ? lines[i - 1] : '';
+                const next = i + 1 < lines.length ? lines[i + 1] : '';
+
+                const likelyNoise =
+                    (prev && next) ||
+                    endsWithQuote(prev) ||
+                    startsWithQuote(next);
+
+                if (likelyNoise) {
+                    lines[i] = '';
+                }
+            }
+
+            return lines.join('\n');
         }
 
         /**
@@ -146,7 +176,7 @@
                 .filter(Boolean);
 
             // Preserve normally sized paragraphs.
-            if (cleaned.length < 420 || sentences.length < 4) {
+            if (cleaned.length < 260 || sentences.length < 3) {
                 return [cleaned];
             }
 
@@ -156,7 +186,7 @@
 
             for (const sentence of sentences) {
                 const projectedLen = currentLen + (current.length ? 1 : 0) + sentence.length;
-                const shouldFlush = current.length > 0 && (current.length >= 3 || projectedLen > 320);
+                const shouldFlush = current.length > 0 && (current.length >= 2 || projectedLen > 220);
 
                 if (shouldFlush) {
                     chunks.push(current.join(' '));
