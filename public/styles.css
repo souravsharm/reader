@@ -253,7 +253,9 @@ footer {
 /* Scene break styling - isolated line with consistent spacing */
 .reading-content p.scene-break {
     text-align: center;
-    margin: 1.8em auto;
+    /* Use padding so spacing is consistent (margins can collapse differently across browsers). */
+    margin: 0 auto;
+    padding: 0.9em 0;
     color: #666;
     font-size: 1.2rem;
     letter-spacing: 0.3em;
