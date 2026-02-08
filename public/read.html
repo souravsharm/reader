@@ -69,9 +69,14 @@
                 .replace(/[\u00A0\u2007\u202F]/g, ' ')
                 .replace(/[ \t]*<[ \t]*\n+/g, '\n\n')
                 .replace(/[ \t]*<[ \t]*$/g, '')
-                // Insert missing spaces after punctuation when the next sentence starts immediately.
+                // Insert missing spaces only when a new sentence starts immediately.
                 // Example: "Hello.World" -> "Hello. World"
-                .replace(/([.!?])(?=[A-Z"\u201C])/g, '$1 ')
+                .replace(/([.!?])(?=[A-Z])/g, '$1 ')
+                // Handle new sentence starting with an opening quote.
+                .replace(/([.!?])(?=["\u201C][A-Z])/g, '$1 ')
+                // Remove accidental spacing before a closing quote.
+                // Example: 'go! "' -> 'go!"'
+                .replace(/\s+(["\u201D])/g, '$1')
                 // Keep consecutive quote blocks separate.
                 .replace(/(["\u201D])\s+(["\u201C])/g, '$1\n\n$2')
                 // Convert inline scene-break token to a standalone line.
