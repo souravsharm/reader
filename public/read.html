@@ -9,7 +9,7 @@
 <body>
     <article class="reading-container">
         <header class="reading-header">
-            <a href="/" class="back-btn">← Paste New Text</a>
+            <a href="/" class="back-btn">&larr; Paste New Text</a>
             <h1>Your Text</h1>
         </header>
 
@@ -20,150 +20,171 @@
         </main>
 
         <footer class="reading-footer">
-            <a href="/" class="btn-secondary">← Back to Paste</a>
+            <a href="/" class="btn-secondary">&larr; Back to Paste</a>
         </footer>
     </article>
 
     <script>
         /**
-         * Render-time formatting only (no app refactor):
-         * - Preserve blank-line paragraph grouping from pasted text.
-         * - Rule 2: Quoted segments ("...") are always isolated as their own blocks.
-         * - Rule 3: Standalone scene-break lines (...) are isolated with spacing.
+         * Render-time formatting pipeline:
+         * 1) Normalize copy/paste artifacts (line endings, smart punctuation, spacing).
+         * 2) Preserve explicit paragraph breaks when available.
+         * 3) Reconstruct readable chunks when iPhone copy flattens text into long blocks.
+         * 4) Keep scene breaks (...) as isolated blocks with clear spacing.
          */
         function reconstructParagraphs(text) {
             if (!text || !text.trim()) {
                 return '<p class="no-text">No text available. <a href="/">Go back</a> and paste some text.</p>';
             }
 
-            // Normalize line endings + iOS/Unicode separators.
-            // iOS paste can include NBSP on “blank” lines; normalize that so paragraph
-            // grouping (blank-line separated) behaves the same as desktop.
-            text = text
+            const normalized = normalizeInputText(text);
+            const segments = splitIntoSegments(normalized);
+            const out = [];
+
+            for (const segment of segments) {
+                if (segment.type === 'scene-break') {
+                    out.push(renderSceneBreak());
+                    continue;
+                }
+
+                const readableParagraphs = splitLongParagraph(segment.text);
+                for (const para of readableParagraphs) {
+                    out.push(renderParagraph(para));
+                }
+            }
+
+            return out.length > 0
+                ? out.join('\n')
+                : '<p class="no-text">No text available. <a href="/">Go back</a> and paste some text.</p>';
+        }
+
+        /**
+         * Normalize copy/paste artifacts seen across browsers (especially iPhone Safari).
+         */
+        function normalizeInputText(text) {
+            return text
                 .replace(/\r\n/g, '\n')
                 .replace(/\r/g, '\n')
-                .replace(/\u2028|\u2029/g, '\n') // line/paragraph separators
-                .replace(/\u00A0/g, ' '); // NBSP -> regular space
-            text = text.trim();
+                .replace(/[\u2028\u2029]/g, '\n')
+                .replace(/[\u00A0\u2007\u202F]/g, ' ')
+                .replace(/[ \t]*<[ \t]*\n+/g, '\n\n')
+                .replace(/[ \t]*<[ \t]*$/g, '')
+                // Insert missing spaces after punctuation when the next sentence starts immediately.
+                // Example: "Hello.World" -> "Hello. World"
+                .replace(/([.!?])(?=[A-Z"\u201C])/g, '$1 ')
+                // Keep consecutive quote blocks separate.
+                .replace(/(["\u201D])\s+(["\u201C])/g, '$1\n\n$2')
+                // Convert inline scene-break token to a standalone line.
+                .replace(/([.!?]"?)\s*(?:\.{3}|\u2026)\s*(?=[A-Z"\u201C])/g, '$1\n...\n')
+                // Normalize scene break variants to "..."
+                .replace(/^\s*(?:\u2026|\.{3}|\. \. \.)\s*$/gm, '...')
+                .trim();
+        }
 
-            // Preserve original paragraph grouping: blank-line separated blocks.
-            // Also tolerate whitespace-only "blank" lines.
-            const rawParagraphs = text.split(/\n[\s]*\n+/);
+        /**
+         * Build semantic segments: paragraph text blocks and scene breaks.
+         */
+        function splitIntoSegments(text) {
+            const segments = [];
+            const rawBlocks = text.split(/\n[ \t]*\n+/);
 
-            const out = [];
-            let currentGroupBlocks = [];
+            for (const rawBlock of rawBlocks) {
+                const block = rawBlock.trim();
+                if (!block) continue;
 
-            const flushGroup = () => {
-                if (currentGroupBlocks.length === 0) return;
-                out.push(renderParagraphGroup(currentGroupBlocks));
-                currentGroupBlocks = [];
-            };
+                const lines = block.split('\n');
+                const runningTextLines = [];
 
-            for (const rawPara of rawParagraphs) {
-                const para = rawPara.trim();
-                if (!para) continue;
-
-                // A raw paragraph may still contain multiple lines; isolate scene breaks that
-                // appear as their own line within the paragraph.
-                const lines = para.split('\n');
-                const textLines = [];
-
-                const flushTextLinesIntoGroup = () => {
-                    if (textLines.length === 0) return;
-                    const joined = textLines.join(' ').replace(/\s+/g, ' ').trim();
-                    textLines.length = 0;
+                const flushText = () => {
+                    if (runningTextLines.length === 0) return;
+                    const joined = runningTextLines.join(' ').replace(/\s+/g, ' ').trim();
+                    runningTextLines.length = 0;
                     if (!joined) return;
-                    currentGroupBlocks.push(...splitIntoQuoteAndProseBlocks(joined));
+                    segments.push({ type: 'text', text: joined });
                 };
 
                 for (const line of lines) {
                     if (isSceneBreakLine(line)) {
-                        // Rule 3: scene break must not merge with surrounding prose/quotes.
-                        flushTextLinesIntoGroup();
-                        flushGroup();
-                        out.push(renderSceneBreak());
+                        flushText();
+                        segments.push({ type: 'scene-break' });
                         continue;
                     }
-                    if (line.trim().length === 0) continue;
-                    textLines.push(line.trim());
+
+                    const cleanedLine = line.trim();
+                    if (!cleanedLine) continue;
+                    runningTextLines.push(cleanedLine);
                 }
 
-                flushTextLinesIntoGroup();
-                // End of original paragraph group.
-                flushGroup();
+                flushText();
             }
 
-            flushGroup();
-            return out.join('\n');
+            return segments;
         }
 
         /**
-         * Rule 3 helper: line is exactly "..." (ignoring surrounding whitespace).
+         * Recognize scene break lines:
+         * - ...
+         * - unicode ellipsis
+         * - . . .
+         * - * * *
          */
         function isSceneBreakLine(line) {
-            return /^\s*\.{3}\s*$/.test(line);
+            return /^\s*(?:\.{3}|\u2026|\. \. \.|\*\s*\*\s*\*)\s*$/.test(line);
         }
 
         /**
-         * Rule 2: split into prose/quote blocks so quotes never share a line with prose.
-         * Example: '"ram"  "sham" I think' -> ['"ram"', '"sham"', 'I think']
-         *
-         * Defensive behavior:
-         * - Only isolates properly paired quotes ("..."). Unmatched quotes are left as prose.
-         * - Does not split normal prose except around quotes.
+         * If a text block is very long (common after iPhone "copy all"),
+         * split into smaller paragraphs by sentence boundaries.
          */
-        function splitIntoQuoteAndProseBlocks(paragraphText) {
-            const blocks = [];
+        function splitLongParagraph(text) {
+            const cleaned = text.replace(/\s+/g, ' ').trim();
+            if (!cleaned) return [];
 
-            // Match ASCII double quotes with no newline inside the quoted segment.
-            // This avoids runaway matches across large sections.
-            const quoteRe = /"[^"\n]*"/g;
+            const sentenceMatches = cleaned.match(/[^.!?\u2026]+(?:[.!?\u2026]+["'\u201D\u2019)\]]*)+|[^.!?\u2026]+$/g) || [cleaned];
+            const sentences = sentenceMatches
+                .map((s) => s.trim())
+                .filter(Boolean);
 
-            let lastIndex = 0;
-            let match;
-
-            while ((match = quoteRe.exec(paragraphText)) !== null) {
-                const before = paragraphText.slice(lastIndex, match.index).trim();
-                if (before) blocks.push({ type: 'prose', text: before });
-
-                const quoted = match[0].trim();
-                if (quoted) blocks.push({ type: 'quote', text: quoted });
-
-                lastIndex = quoteRe.lastIndex;
+            // Preserve normally sized paragraphs.
+            if (cleaned.length < 420 || sentences.length < 4) {
+                return [cleaned];
             }
 
-            const after = paragraphText.slice(lastIndex).trim();
-            if (after) blocks.push({ type: 'prose', text: after });
+            const chunks = [];
+            let current = [];
+            let currentLen = 0;
 
-            if (blocks.length === 0 && paragraphText.trim()) {
-                blocks.push({ type: 'prose', text: paragraphText.trim() });
+            for (const sentence of sentences) {
+                const projectedLen = currentLen + (current.length ? 1 : 0) + sentence.length;
+                const shouldFlush = current.length > 0 && (current.length >= 3 || projectedLen > 320);
+
+                if (shouldFlush) {
+                    chunks.push(current.join(' '));
+                    current = [];
+                    currentLen = 0;
+                }
+
+                current.push(sentence);
+                currentLen += (currentLen ? 1 : 0) + sentence.length;
             }
 
-            return blocks;
+            if (current.length > 0) {
+                chunks.push(current.join(' '));
+            }
+
+            return chunks.length > 0 ? chunks : [cleaned];
         }
 
-        function renderParagraphGroup(blocks) {
-            // Keep group semantics but allow multiple blocks inside.
-            // Safari Reader will still see <p> and <blockquote> as readable content.
-            const inner = blocks
-                .map((b) => {
-                    if (b.type === 'quote') {
-                        return `<blockquote class="quote"><p>${escapeHtml(b.text)}</p></blockquote>`;
-                    }
-                    return `<p class="prose">${escapeHtml(b.text)}</p>`;
-                })
-                .join('\n');
-
-            return `<div class="para-group">\n${inner}\n</div>`;
+        function renderParagraph(text) {
+            return `<p class="prose">${escapeHtml(text)}</p>`;
         }
 
         function renderSceneBreak() {
-            // Render as its own block with CSS-controlled spacing.
             return '<p class="scene-break">...</p>';
         }
 
         /**
-         * Escape HTML to prevent XSS attacks
+         * Escape HTML to prevent XSS attacks.
          */
         function escapeHtml(text) {
             const div = document.createElement('div');
@@ -171,17 +192,14 @@
             return div.innerHTML;
         }
 
-        /**
-         * Add text statistics for debugging
-         */
         function analyzeText(text) {
             const stats = {
                 length: text.length,
                 lines: text.split('\n').length,
-                paragraphs: text.split(/\n\n+/).length,
+                paragraphHints: text.split(/\n[ \t]*\n+/).length,
                 words: text.split(/\s+/).length
             };
-            console.log('📊 Text Analysis:', stats);
+            console.log('Text Analysis:', stats);
             return stats;
         }
 
@@ -189,20 +207,20 @@
             try {
                 const response = await fetch('/get-text');
                 const data = await response.json();
-                
+
                 const textContent = document.getElementById('textContent');
-                
+
                 if (data.text && data.text.trim()) {
                     analyzeText(data.text);
                     const html = reconstructParagraphs(data.text);
                     textContent.innerHTML = html;
-                    console.log('✅ Text rendered successfully');
+                    console.log('Text rendered successfully');
                 } else {
                     textContent.innerHTML = '<p class="no-text">No text available. <a href="/">Go back</a> and paste some text.</p>';
                 }
             } catch (error) {
-                console.error('❌ Error:', error);
-                document.getElementById('textContent').innerHTML = 
+                console.error('Error:', error);
+                document.getElementById('textContent').innerHTML =
                     '<p class="error">Failed to load text. <a href="/">Try again</a></p>';
             }
         }
