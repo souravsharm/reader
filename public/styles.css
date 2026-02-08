@@ -5,6 +5,12 @@
     box-sizing: border-box;
 }
 
+html {
+    /* Prevent iOS Safari automatic text inflation differences vs desktop. */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
     line-height: 1.6;
@@ -173,92 +179,55 @@ footer {
 .reading-content {
     flex: 1;
     padding: 50px 60px;
-    font-size: 1.15rem;
-    line-height: 1.8;
+    font-size: 1.12rem;
+    line-height: 1.86;
     color: #2c3e50;
-    /* Optimal settings for Safari Reader Mode */
+    /* Keep semantic text styling straightforward for Reader Mode extraction. */
     font-family: -apple-system, BlinkMacSystemFont, 'Charter', 'Georgia', serif;
 }
 
 .reading-content p {
-    /* CRITICAL: Generous paragraph spacing for readability */
-    margin-bottom: 1.8em;
-    
-    /* Text rendering optimizations */
-    text-align: justify;
-    text-justify: inter-word;
-    
-    /* Prevent orphans and widows for better typography */
+    margin: 0 0 1.25em;
+    text-align: left;
+    text-wrap: pretty;
+    overflow-wrap: break-word;
+    word-break: normal;
+    letter-spacing: normal;
+    word-spacing: normal;
     orphans: 3;
     widows: 3;
-    
-    /* Safari-specific optimizations */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    
-    /* Ensure proper spacing even with poor formatting */
-    hyphens: auto;
-    -webkit-hyphens: auto;
-    word-spacing: 0.05em;
-    letter-spacing: 0.01em;
+    hyphens: none;
+    -webkit-hyphens: none;
 }
 
 .reading-content p:last-child {
     margin-bottom: 0;
 }
 
-/* Add extra spacing between paragraphs in Safari Reader Mode */
-@supports (-webkit-backdrop-filter: blur(1px)) {
-    .reading-content p {
-        margin-bottom: 2em;
-    }
-}
-
-/* First paragraph special styling (optional but nice) */
 .reading-content p:first-of-type {
     margin-top: 0;
 }
 
-/* Ensure proper spacing for consecutive paragraphs */
 .reading-content p + p {
     margin-top: 0;
 }
 
-/* Render-time formatting blocks */
-.para-group {
-    /* Preserve original blank-line paragraph separation visually */
-    margin-bottom: 1.8em;
-}
-
-.para-group:last-child {
-    margin-bottom: 0;
-}
-
-/* Inside a group, avoid large paragraph gaps (these are "lines" within one pasted paragraph) */
-.para-group > p.prose {
-    margin: 0.4em 0;
-}
-
-.para-group > blockquote.quote {
-    margin: 0.8em 0;
-    padding-left: 1em;
-    border-left: 3px solid rgba(102, 126, 234, 0.35);
-    color: #2c3e50;
-}
-
-.para-group > blockquote.quote p {
-    margin: 0;
-}
-
-/* Scene break styling - isolated line with consistent spacing */
 .reading-content p.scene-break {
     text-align: center;
-    /* Use padding so spacing is consistent (margins can collapse differently across browsers). */
-    margin: 0 auto;
-    padding: 0.9em 0;
+    margin: 1.55em auto;
+    padding: 0;
     color: #666;
-    font-size: 1.2rem;
-    letter-spacing: 0.3em;
+    font-size: 1.05rem;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: 0.22em;
+}
+
+.reading-content p.prose + p.scene-break,
+.reading-content p.scene-break + p.prose {
+    margin-top: 1.6em;
 }
 
 .loading,
@@ -314,6 +283,7 @@ footer {
     .reading-content {
         padding: 30px 25px;
         font-size: 1.05rem;
+        line-height: 1.9;
     }
 
     .back-btn {
@@ -349,5 +319,14 @@ footer {
     .reading-content {
         padding: 25px 20px;
         font-size: 1rem;
+        line-height: 1.92;
+    }
+
+    .reading-content p {
+        margin-bottom: 1.2em;
+    }
+
+    .reading-content p.scene-break {
+        margin: 1.45em auto;
     }
 }
