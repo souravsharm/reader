@@ -36,13 +36,19 @@
                 return '<p class="no-text">No text available. <a href="/">Go back</a> and paste some text.</p>';
             }
 
-            // Normalize line endings
-            text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+            // Normalize line endings + iOS/Unicode separators.
+            // iOS paste can include NBSP on “blank” lines; normalize that so paragraph
+            // grouping (blank-line separated) behaves the same as desktop.
+            text = text
+                .replace(/\r\n/g, '\n')
+                .replace(/\r/g, '\n')
+                .replace(/\u2028|\u2029/g, '\n') // line/paragraph separators
+                .replace(/\u00A0/g, ' '); // NBSP -> regular space
             text = text.trim();
 
             // Preserve original paragraph grouping: blank-line separated blocks.
             // Also tolerate whitespace-only "blank" lines.
-            const rawParagraphs = text.split(/\n[ \t]*\n+/);
+            const rawParagraphs = text.split(/\n[\s]*\n+/);
 
             const out = [];
             let currentGroupBlocks = [];
